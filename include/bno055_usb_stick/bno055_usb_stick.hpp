@@ -1,6 +1,7 @@
 #ifndef BNO055_USB_STICK_BNO055_USB_STICK_HPP
 #define BNO055_USB_STICK_BNO055_USB_STICK_HPP
 
+#include <algorithm>
 #include <deque>
 #include <sstream>
 #include <string>
@@ -11,7 +12,9 @@
 
 #include <bno055_usb_stick/constants.hpp>
 #include <bno055_usb_stick/decoder.hpp>
+#include <bno055_usb_stick_msgs/Output.h>
 
+#include <boost/cstdint.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/read_until.hpp>
@@ -59,25 +62,22 @@ class BNO055USBStick {
 
         // pack commands
         commands_.clear();
-        for (const char **command = Constants::initCommands(); *command; ++command) {
-            //commands_.push_back(*command);
-        }
         if (mode == "ndof") {
-            for (const char **command = Constants::toNDOFCommands(); *command; ++command) {
+            for (boost::uint8_t **command = Constants::toNDOFCommands(); *command; ++command) {
                 commands_.push_back(*command);
             }
         } else if (mode == "imu") {
-            for (const char **command = Constants::toIMUCommands(); *command; ++command) {
+            for (boost::uint8_t **command = Constants::toIMUCommands(); *command; ++command) {
                 commands_.push_back(*command);
             }
         } else {
             ROS_WARN_STREAM("Unknown mode \""
                             << mode << "\" was given. Will use the default mode \"ndof\" instead.");
-            for (const char **command = Constants::toNDOFCommands(); *command; ++command) {
+            for (boost::uint8_t **command = Constants::toNDOFCommands(); *command; ++command) {
                 commands_.push_back(*command);
             }
         }
-        for (const char **command = Constants::startStreamCommands(); *command; ++command) {
+        for (boost::uint8_t **command = Constants::startStreamCommands(); *command; ++command) {
             commands_.push_back(*command);
         }
 
@@ -92,8 +92,9 @@ class BNO055USBStick {
         }
 
         // trigger send the top command in the queue
-        const char *command(commands_.front());
-        boost::asio::async_write(serial_, boost::asio::buffer(command, command[1]),
+        const boost::uint8_t *command(commands_.front());
+        boost::asio::async_write(serial_,
+                                 boost::asio::buffer(command, Constants::getCommandLength(command)),
                                  boost::bind(&BNO055USBStick::handleSendCommand, this, _1));
     }
 
@@ -104,7 +105,7 @@ class BNO055USBStick {
         }
 
         // pop the top command from the queue
-        //dumpWritten("handleSendCommand: written: ");
+        // dumpWritten("handleSendCommand: written: ");
         commands_.pop_front();
 
         // trigger wait the response for the command
@@ -124,7 +125,7 @@ class BNO055USBStick {
         }
 
         // clear the read response (cannot parse it because the protocol is unknown...)
-        //dumpRead("handleWaitResponse: read: ");
+        // dumpRead("handleWaitResponse: read: ");
         buffer_.consume(bytes);
 
         // trigger send the next command, or wait data stream
@@ -148,14 +149,21 @@ class BNO055USBStick {
 
         // parse the received data
         dumpRead("handleWaitData: read: ");
-        if (buffer_.size() < Constants::DAT_LEN) {
+        if (buffer_.size() >= Constants::DAT_LEN) {
+            const boost::uint8_t *data(
+                boost::asio::buffer_cast< const boost::uint8_t * >(buffer_.data()) +
+                buffer_.size() - Constants::DAT_LEN);
+
+            if (std::equal(data, data + Constants::HDR_LEN, Constants::streamHeader())) {
+                bno055_usb_stick_msgs::Output output(Decoder::decode(data));
+
+                ROS_INFO_STREAM("handleWaitData: output:\n" << output);
+            } else {
+                ROS_WARN("handleWaitData: Data header mismatch");
+            }
+        } else {
             ROS_WARN_STREAM("handleWaitData: Too short data size (" << buffer_.size()
                                                                     << "). Continue anyway.");
-        } else {
-            const char *data(boost::asio::buffer_cast< const char * >(buffer_.data()) +
-                             buffer_.size() - Constants::DAT_LEN);
-
-            // Decoder::decode(data, imu, mag, temp);
         }
 
         // clear the parsed data
@@ -169,9 +177,9 @@ class BNO055USBStick {
 
     void dumpWritten(const std::string &prefix) {
         std::ostringstream oss;
-        const unsigned char *begin(reinterpret_cast< const unsigned char * >(commands_.front()));
-        const unsigned char *end(begin + commands_.front()[1]);
-        for (const unsigned char *c = begin; c != end; ++c) {
+        const boost::uint8_t *begin(commands_.front());
+        const boost::uint8_t *end(begin + Constants::getCommandLength(commands_.front()));
+        for (const boost::uint8_t *c = begin; c != end; ++c) {
             oss << "0x" << std::setw(2) << std::setfill('0') << std::hex << int(*c) << " ";
         }
         ROS_INFO_STREAM(prefix << oss.str());
@@ -179,10 +187,10 @@ class BNO055USBStick {
 
     void dumpRead(const std::string &prefix) {
         std::ostringstream oss;
-        const unsigned char *begin(
-            boost::asio::buffer_cast< const unsigned char * >(buffer_.data()));
-        const unsigned char *end(begin + buffer_.size());
-        for (const unsigned char *c = begin; c != end; ++c) {
+        const boost::uint8_t *begin(
+            boost::asio::buffer_cast< const boost::uint8_t * >(buffer_.data()));
+        const boost::uint8_t *end(begin + buffer_.size());
+        for (const boost::uint8_t *c = begin; c != end; ++c) {
             oss << "0x" << std::setw(2) << std::setfill('0') << std::hex << int(*c) << " ";
         }
         ROS_INFO_STREAM(prefix << oss.str());
@@ -190,7 +198,7 @@ class BNO055USBStick {
 
   private:
     // buffers
-    std::deque< const char * > commands_;
+    std::deque< const boost::uint8_t * > commands_;
     boost::asio::streambuf buffer_;
 
     // async objects

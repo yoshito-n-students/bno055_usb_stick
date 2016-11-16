@@ -6,6 +6,8 @@ project(bno055_usb_stick)
 ## is used, also find other catkin packages
 find_package(
   catkin REQUIRED COMPONENTS
+  bno055_usb_stick_msgs
+  geometry_msgs
   roscpp
   sensor_msgs
   )
@@ -105,7 +107,7 @@ find_package(
 catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES bno055_usb_stick
-  CATKIN_DEPENDS roscpp sensor_msgs
+  CATKIN_DEPENDS bno055_usb_stick_msgs geometry_msgs roscpp sensor_msgs
 #  DEPENDS system_lib
 )
 

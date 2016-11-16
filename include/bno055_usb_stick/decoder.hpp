@@ -1,12 +1,17 @@
 #ifndef BNO055_USB_STICK_DECODER_HPP
 #define BNO055_USB_STICK_DECODER_HPP
 
+#include <geometry_msgs/Quaternion.h>
+#include <geometry_msgs/Vector3.h>
 #include <ros/time.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/MagneticField.h>
 #include <sensor_msgs/Temperature.h>
 
 #include <bno055_usb_stick/constants.hpp>
+#include <bno055_usb_stick_msgs/CalibrationStatus.h>
+#include <bno055_usb_stick_msgs/EulerAngles.h>
+#include <bno055_usb_stick_msgs/Output.h>
 
 #include <boost/cstdint.hpp>
 
@@ -17,24 +22,23 @@ class Decoder {
 
     virtual ~Decoder() {}
 
-    void decode(const char *data, sensor_msgs::Imu &imu, sensor_msgs::MagneticField &mag,
-                sensor_msgs::Temperature &temp) const {
-        const ros::Time stamp(ros::Time::now());
-
-        // decode imu
-        imu.angular_velocity = decodeGyr(data + 12);
-        imu.orientation = decodeQua(data + 24);
-        imu.linear_acceleration = decodeAcc(data + 32);
-
-        // decode mag
-        mag.magnetic_field = decodeMag(data + 6);
-
-        // decode temp
-        temp.temperature = decodeTemp(data + 44);
+    static bno055_usb_stick_msgs::Output decode(const boost::uint8_t *data) {
+        bno055_usb_stick_msgs::Output output;
+        output.header.stamp = ros::Time::now();
+        output.acceleration = decodeAcc(data + Constants::ACC_POS);
+        output.magnetometer = decodeMag(data + Constants::MAG_POS);
+        output.gyroscope = decodeGyr(data + Constants::GYR_POS);
+        output.euler_angles = decodeEul(data + Constants::EUL_POS);
+        output.quaternion = decodeQua(data + Constants::QUA_POS);
+        output.linear_acceleration = decodeLia(data + Constants::LIA_POS);
+        output.gravity_vector = decodeGrv(data + Constants::GRV_POS);
+        output.temperature = decodeTemp(data + Constants::TEMP_POS);
+        output.calibration_status = decodeCalibStat(data + Constants::CALIB_STAT_POS);
+        return output;
     }
 
   private:
-    static geometry_msgs::Vector3 decodeAcc(const char *data) {
+    static geometry_msgs::Vector3 decodeAcc(const boost::uint8_t *data) {
         geometry_msgs::Vector3 acc;
         acc.x = decodeVal(data[1], data[0], Constants::ACC_DENOM);
         acc.y = decodeVal(data[3], data[2], Constants::ACC_DENOM);
@@ -42,7 +46,15 @@ class Decoder {
         return acc;
     }
 
-    static geometry_msgs::Vector3 decodeGyr(const char *data) {
+    static geometry_msgs::Vector3 decodeMag(const boost::uint8_t *data) {
+        geometry_msgs::Vector3 mag;
+        mag.x = decodeVal(data[1], data[0], Constants::MAG_DENOM);
+        mag.y = decodeVal(data[3], data[2], Constants::MAG_DENOM);
+        mag.z = decodeVal(data[5], data[4], Constants::MAG_DENOM);
+        return mag;
+    }
+
+    static geometry_msgs::Vector3 decodeGyr(const boost::uint8_t *data) {
         geometry_msgs::Vector3 gyr;
         gyr.x = decodeVal(data[1], data[0], Constants::GYR_DENOM) * M_PI / 180.;
         gyr.y = decodeVal(data[3], data[2], Constants::GYR_DENOM) * M_PI / 180.;
@@ -50,7 +62,15 @@ class Decoder {
         return gyr;
     }
 
-    static geometry_msgs::Quaternion decodeQua(const char *data) {
+    static bno055_usb_stick_msgs::EulerAngles decodeEul(const boost::uint8_t *data) {
+        bno055_usb_stick_msgs::EulerAngles eul;
+        eul.heading = decodeVal(data[1], data[0], Constants::EUL_DENOM) * M_PI / 180.;
+        eul.roll = decodeVal(data[3], data[2], Constants::EUL_DENOM) * M_PI / 180.;
+        eul.pitch = decodeVal(data[5], data[4], Constants::EUL_DENOM) * M_PI / 180.;
+        return eul;
+    }
+
+    static geometry_msgs::Quaternion decodeQua(const boost::uint8_t *data) {
         geometry_msgs::Quaternion qua;
         qua.w = decodeVal(data[1], data[0], Constants::QUA_DENOM);
         qua.x = decodeVal(data[3], data[2], Constants::QUA_DENOM);
@@ -59,17 +79,35 @@ class Decoder {
         return qua;
     }
 
-    static geometry_msgs::Vector3 decodeMag(const char *data) {
-        geometry_msgs::Vector3 mag;
-        mag.x = decodeVal(data[1], data[0], Constants::MAG_DENOM);
-        mag.y = decodeVal(data[3], data[2], Constants::MAG_DENOM);
-        mag.z = decodeVal(data[5], data[4], Constants::MAG_DENOM);
-        return mag;
+    static geometry_msgs::Vector3 decodeLia(const boost::uint8_t *data) {
+        geometry_msgs::Vector3 lia;
+        lia.x = decodeVal(data[1], data[0], Constants::LIA_DENOM);
+        lia.y = decodeVal(data[3], data[2], Constants::LIA_DENOM);
+        lia.z = decodeVal(data[5], data[4], Constants::LIA_DENOM);
+        return lia;
     }
 
-    static double decodeTemp(const char *data) { return data[0] / Constants::TEMP_DENOM; }
+    static geometry_msgs::Vector3 decodeGrv(const boost::uint8_t *data) {
+        geometry_msgs::Vector3 grv;
+        grv.x = decodeVal(data[1], data[0], Constants::GRV_DENOM);
+        grv.y = decodeVal(data[3], data[2], Constants::GRV_DENOM);
+        grv.z = decodeVal(data[5], data[4], Constants::GRV_DENOM);
+        return grv;
+    }
 
-    static double decodeVal(const char msb, const char lsb, const double denom) {
+    static double decodeTemp(const boost::uint8_t *data) { return data[0] / Constants::TEMP_DENOM; }
+
+    static bno055_usb_stick_msgs::CalibrationStatus decodeCalibStat(const boost::uint8_t *data) {
+        bno055_usb_stick_msgs::CalibrationStatus calib_stat;
+        calib_stat.system = (*data >> 6) & 0x3;
+        calib_stat.gyroscope = (*data >> 4) & 0x3;
+        calib_stat.accelerometer = (*data >> 2) & 0x3;
+        calib_stat.magnetometer = *data & 0x3;
+        return calib_stat;
+    }
+
+    static double decodeVal(const boost::uint8_t msb, const boost::uint8_t lsb,
+                            const double denom) {
         return boost::int16_t((boost::int16_t(msb) << 8) | lsb) / denom;
     }
 };
