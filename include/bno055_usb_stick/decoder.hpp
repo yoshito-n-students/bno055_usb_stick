@@ -1,12 +1,14 @@
 #ifndef BNO055_USB_STICK_DECODER_HPP
 #define BNO055_USB_STICK_DECODER_HPP
 
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Vector3.h>
 #include <ros/time.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/MagneticField.h>
 #include <sensor_msgs/Temperature.h>
+#include <tf/transform_datatypes.h>
 
 #include <bno055_usb_stick/constants.hpp>
 #include <bno055_usb_stick_msgs/CalibrationStatus.h>
@@ -25,6 +27,7 @@ class Decoder {
     static bno055_usb_stick_msgs::Output decode(const boost::uint8_t *data) {
         bno055_usb_stick_msgs::Output output;
         output.header.stamp = ros::Time::now();
+        output.header.frame_id = "bno055";
         output.acceleration = decodeAcc(data + Constants::ACC_POS);
         output.magnetometer = decodeMag(data + Constants::MAG_POS);
         output.gyroscope = decodeGyr(data + Constants::GYR_POS);
@@ -35,6 +38,30 @@ class Decoder {
         output.temperature = decodeTemp(data + Constants::TEMP_POS);
         output.calibration_status = decodeCalibStat(data + Constants::CALIB_STAT_POS);
         return output;
+    }
+
+    static tf::StampedTransform toTfMsg(const bno055_usb_stick_msgs::Output &output) {
+        return tf::StampedTransform(
+            tf::Transform(tf::Quaternion(output.quaternion.x, output.quaternion.y,
+                                         output.quaternion.z, output.quaternion.w)),
+            output.header.stamp, "fixed", output.header.frame_id);
+    }
+
+    static sensor_msgs::Imu toImuMsg(const bno055_usb_stick_msgs::Output &output) {
+        sensor_msgs::Imu imu;
+        imu.header = output.header;
+        imu.orientation = output.quaternion;
+        imu.angular_velocity = output.gyroscope;
+        imu.linear_acceleration = output.acceleration;
+        return imu;
+    }
+
+    static geometry_msgs::PoseStamped toPoseMsg(const bno055_usb_stick_msgs::Output &output) {
+        geometry_msgs::PoseStamped pose;
+        pose.header = output.header;
+        pose.pose.position.x = pose.pose.position.y = pose.pose.position.z = 0.;
+        pose.pose.orientation = output.quaternion;
+        return pose;
     }
 
   private:

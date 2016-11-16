@@ -14,7 +14,6 @@
 #include <bno055_usb_stick/decoder.hpp>
 #include <bno055_usb_stick_msgs/Output.h>
 
-#include <boost/cstdint.hpp>
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/read_until.hpp>
@@ -22,6 +21,8 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/bind.hpp>
+#include <boost/cstdint.hpp>
+#include <boost/function.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
 
@@ -29,8 +30,12 @@ namespace bno055_usb_stick {
 
 class BNO055USBStick {
   public:
-    BNO055USBStick(boost::asio::io_service &asio_service, const std::string &ns = "~")
-        : serial_(asio_service), timer_(asio_service) {
+    typedef boost::function< void(const bno055_usb_stick_msgs::Output &)> Callback;
+
+  public:
+    BNO055USBStick(boost::asio::io_service &asio_service, const Callback &callback,
+                   const std::string &ns = "~")
+        : serial_(asio_service), timer_(asio_service), callback_(callback) {
         start(ns);
     }
 
@@ -148,7 +153,7 @@ class BNO055USBStick {
         }
 
         // parse the received data
-        dumpRead("handleWaitData: read: ");
+        // dumpRead("handleWaitData: read: ");
         if (buffer_.size() >= Constants::DAT_LEN) {
             const boost::uint8_t *data(
                 boost::asio::buffer_cast< const boost::uint8_t * >(buffer_.data()) +
@@ -156,8 +161,10 @@ class BNO055USBStick {
 
             if (std::equal(data, data + Constants::HDR_LEN, Constants::streamHeader())) {
                 bno055_usb_stick_msgs::Output output(Decoder::decode(data));
-
-                ROS_INFO_STREAM("handleWaitData: output:\n" << output);
+                // ROS_INFO_STREAM("handleWaitData: output:\n" << output);
+                if (callback_) {
+                    callback_(output);
+                }
             } else {
                 ROS_WARN("handleWaitData: Data header mismatch");
             }
@@ -204,6 +211,9 @@ class BNO055USBStick {
     // async objects
     boost::asio::serial_port serial_;
     boost::asio::deadline_timer timer_;
+
+    // callback given by the user
+    const Callback callback_;
 };
 }
 
