@@ -64,6 +64,20 @@ class Decoder {
         return pose;
     }
 
+    static sensor_msgs::MagneticField toMagMsg(const bno055_usb_stick_msgs::Output &output) {
+        sensor_msgs::MagneticField mag;
+        mag.header = output.header;
+        mag.magnetic_field = output.magnetometer;
+        return mag;
+    }
+
+    static sensor_msgs::Temperature toTempMsg(const bno055_usb_stick_msgs::Output &output){
+        sensor_msgs::Temperature temp;
+        temp.header = output.header;
+        temp.temperature = output.temperature;
+        return temp;
+    }
+
   private:
     static geometry_msgs::Vector3 decodeAcc(const boost::uint8_t *data) {
         geometry_msgs::Vector3 acc;

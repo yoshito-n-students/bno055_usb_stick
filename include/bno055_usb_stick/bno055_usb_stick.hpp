@@ -68,21 +68,24 @@ class BNO055USBStick {
         // pack commands
         commands_.clear();
         if (mode == "ndof") {
-            for (boost::uint8_t **command = Constants::toNDOFCommands(); *command; ++command) {
+            for (const boost::uint8_t **command = Constants::toNDOFCommands(); *command;
+                 ++command) {
                 commands_.push_back(*command);
             }
         } else if (mode == "imu") {
-            for (boost::uint8_t **command = Constants::toIMUCommands(); *command; ++command) {
+            for (const boost::uint8_t **command = Constants::toIMUCommands(); *command; ++command) {
                 commands_.push_back(*command);
             }
         } else {
             ROS_WARN_STREAM("Unknown mode \""
                             << mode << "\" was given. Will use the default mode \"ndof\" instead.");
-            for (boost::uint8_t **command = Constants::toNDOFCommands(); *command; ++command) {
+            for (const boost::uint8_t **command = Constants::toNDOFCommands(); *command;
+                 ++command) {
                 commands_.push_back(*command);
             }
         }
-        for (boost::uint8_t **command = Constants::startStreamCommands(); *command; ++command) {
+        for (const boost::uint8_t **command = Constants::startStreamCommands(); *command;
+             ++command) {
             commands_.push_back(*command);
         }
 
@@ -100,10 +103,10 @@ class BNO055USBStick {
         const boost::uint8_t *command(commands_.front());
         boost::asio::async_write(serial_,
                                  boost::asio::buffer(command, Constants::getCommandLength(command)),
-                                 boost::bind(&BNO055USBStick::handleSendCommand, this, _1));
+                                 boost::bind(&BNO055USBStick::handleSendCommand, this, _1, _2));
     }
 
-    void handleSendCommand(const boost::system::error_code &error) {
+    void handleSendCommand(const boost::system::error_code &error, const std::size_t bytes) {
         if (error) {
             ROS_ERROR_STREAM("handleSendCommand: " << error.message());
             return;
@@ -160,7 +163,7 @@ class BNO055USBStick {
                 buffer_.size() - Constants::DAT_LEN);
 
             if (std::equal(data, data + Constants::HDR_LEN, Constants::streamHeader())) {
-                bno055_usb_stick_msgs::Output output(Decoder::decode(data));
+                const bno055_usb_stick_msgs::Output output(Decoder::decode(data));
                 // ROS_INFO_STREAM("handleWaitData: output:\n" << output);
                 if (callback_) {
                     callback_(output);
