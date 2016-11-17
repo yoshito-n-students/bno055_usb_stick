@@ -45,8 +45,6 @@ struct ResponseCondition {
             }
         }
 
-        ROS_INFO("%%");
-
         // reaching here means that the found prefix should be evaluated again
         // unless the buffer does not contain another complete response
         const Result result_rest(operator()(response_begin + 1, end));
