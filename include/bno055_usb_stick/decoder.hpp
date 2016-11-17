@@ -40,11 +40,11 @@ class Decoder {
         return output;
     }
 
-    static tf::StampedTransform toTfMsg(const bno055_usb_stick_msgs::Output &output) {
-        return tf::StampedTransform(
-            tf::Transform(tf::Quaternion(output.quaternion.x, output.quaternion.y,
-                                         output.quaternion.z, output.quaternion.w)),
-            output.header.stamp, "fixed", output.header.frame_id);
+    static tf::StampedTransform toTFTransform(const bno055_usb_stick_msgs::Output &output) {
+        tf::Quaternion quaternion;
+        tf::quaternionMsgToTF(output.quaternion, quaternion);
+        return tf::StampedTransform(tf::Transform(tf::Quaternion(quaternion)), output.header.stamp,
+                                    "fixed", output.header.frame_id);
     }
 
     static sensor_msgs::Imu toImuMsg(const bno055_usb_stick_msgs::Output &output) {
@@ -71,7 +71,7 @@ class Decoder {
         return mag;
     }
 
-    static sensor_msgs::Temperature toTempMsg(const bno055_usb_stick_msgs::Output &output){
+    static sensor_msgs::Temperature toTempMsg(const bno055_usb_stick_msgs::Output &output) {
         sensor_msgs::Temperature temp;
         temp.header = output.header;
         temp.temperature = output.temperature;

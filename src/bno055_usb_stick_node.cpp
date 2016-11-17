@@ -24,7 +24,7 @@ ros::Publisher temp_pub;
 void publish(const bno055_usb_stick_msgs::Output &output) {
     imu_pub.publish(bus::Decoder::toImuMsg(output));
     pose_pub.publish(bus::Decoder::toPoseMsg(output));
-    tf_pub->sendTransform(bus::Decoder::toTfMsg(output));
+    tf_pub->sendTransform(bus::Decoder::toTFTransform(output));
     mag_pub.publish(bus::Decoder::toMagMsg(output));
     temp_pub.publish(bus::Decoder::toTempMsg(output));
 }

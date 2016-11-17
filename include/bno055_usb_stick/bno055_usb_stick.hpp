@@ -12,6 +12,7 @@
 
 #include <bno055_usb_stick/constants.hpp>
 #include <bno055_usb_stick/decoder.hpp>
+#include <bno055_usb_stick/match_conditions.hpp>
 #include <bno055_usb_stick_msgs/Output.h>
 
 #include <boost/asio/deadline_timer.hpp>
@@ -122,7 +123,7 @@ class BNO055USBStick {
 
     void startWaitResponse() {
         boost::asio::async_read_until(
-            serial_, buffer_, "\r\n",
+            serial_, buffer_, ResponseCondition(),
             boost::bind(&BNO055USBStick::handleWaitResponse, this, _1, _2));
     }
 
@@ -133,7 +134,7 @@ class BNO055USBStick {
         }
 
         // clear the read response (cannot parse it because the protocol is unknown...)
-        // dumpRead("handleWaitResponse: read: ");
+        // dumpRead("handleWaitResponse: read: ", bytes);
         buffer_.consume(bytes);
 
         // trigger send the next command, or wait data stream
@@ -145,7 +146,7 @@ class BNO055USBStick {
     }
 
     void startWaitData() {
-        boost::asio::async_read_until(serial_, buffer_, "\r\n",
+        boost::asio::async_read_until(serial_, buffer_, DataCondition(),
                                       boost::bind(&BNO055USBStick::handleWaitData, this, _1, _2));
     }
 
@@ -155,25 +156,14 @@ class BNO055USBStick {
             return;
         }
 
-        // parse the received data
-        // dumpRead("handleWaitData: read: ");
-        if (buffer_.size() >= Constants::DAT_LEN) {
-            const boost::uint8_t *data(
-                boost::asio::buffer_cast< const boost::uint8_t * >(buffer_.data()) +
-                buffer_.size() - Constants::DAT_LEN);
-
-            if (std::equal(data, data + Constants::HDR_LEN, Constants::streamHeader())) {
-                const bno055_usb_stick_msgs::Output output(Decoder::decode(data));
-                // ROS_INFO_STREAM("handleWaitData: output:\n" << output);
-                if (callback_) {
-                    callback_(output);
-                }
-            } else {
-                ROS_WARN("handleWaitData: Data header mismatch");
-            }
-        } else {
-            ROS_WARN_STREAM("handleWaitData: Too short data size (" << buffer_.size()
-                                                                    << "). Continue anyway.");
+        // decode the received data and execute the user callback
+        // dumpRead("handleWaitData: read: ", bytes);
+        if (callback_) {
+            const boost::uint8_t *data_end(
+                boost::asio::buffer_cast< const boost::uint8_t * >(buffer_.data()) + bytes);
+            const boost::uint8_t *data_begin(data_end - Constants::DAT_LEN);
+            const bno055_usb_stick_msgs::Output output(Decoder::decode(data_begin));
+            callback_(output);
         }
 
         // clear the parsed data
@@ -195,11 +185,11 @@ class BNO055USBStick {
         ROS_INFO_STREAM(prefix << oss.str());
     }
 
-    void dumpRead(const std::string &prefix) {
+    void dumpRead(const std::string &prefix, const std::size_t bytes) {
         std::ostringstream oss;
         const boost::uint8_t *begin(
             boost::asio::buffer_cast< const boost::uint8_t * >(buffer_.data()));
-        const boost::uint8_t *end(begin + buffer_.size());
+        const boost::uint8_t *end(begin + bytes);
         for (const boost::uint8_t *c = begin; c != end; ++c) {
             oss << "0x" << std::setw(2) << std::setfill('0') << std::hex << int(*c) << " ";
         }

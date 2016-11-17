@@ -80,11 +80,6 @@ struct Constants {
         return commands;
     }
 
-    static const boost::uint8_t *streamHeader() {
-        static const boost::uint8_t header[] = {0xaa, 0x38, 0x01, 0x00, 0x86};
-        return header;
-    }
-
     static const boost::uint8_t **stopStreamCommands() {
         static const boost::uint8_t _00[] = {0xaa, 0x06, 0x06, 0x00, 0x0d, 0x0a};
         static const boost::uint8_t *commands[] = {_00, NULL};
