@@ -17,14 +17,14 @@ namespace bus = bno055_usb_stick;
 
 ros::Publisher imu_pub;
 ros::Publisher pose_pub;
-boost::shared_ptr<tf::TransformBroadcaster> tf_pub;
+boost::shared_ptr< tf::TransformBroadcaster > tf_pub;
 ros::Publisher mag_pub;
 ros::Publisher temp_pub;
 
 void publish(const bno055_usb_stick_msgs::Output &output) {
     imu_pub.publish(bus::Decoder::toImuMsg(output));
     pose_pub.publish(bus::Decoder::toPoseMsg(output));
-    tf_pub->sendTransform(bus::Decoder::toTFTransform(output));
+    tf_pub->sendTransform(bus::Decoder::toTFTransform(output, "fixed"));
     mag_pub.publish(bus::Decoder::toMagMsg(output));
     temp_pub.publish(bus::Decoder::toTempMsg(output));
 }

@@ -36,24 +36,19 @@ class BNO055USBStick {
   public:
     BNO055USBStick(boost::asio::io_service &asio_service, const Callback &callback,
                    const std::string &ns = "~")
-        : serial_(asio_service), timer_(asio_service), callback_(callback) {
-        start(ns);
+        : port_(ros::param::param< std::string >(ros::names::append(ns, "port"), "/dev/ttyACM0")),
+          mode_(ros::param::param< std::string >(ros::names::append(ns, "mode"), "ndof")),
+          serial_(asio_service), timer_(asio_service), callback_(callback), decoder_(ns) {
+        start();
     }
 
     virtual ~BNO055USBStick() { stop(); }
 
   private:
-    void start(const std::string &ns) {
-        namespace rp = ros::param;
-        namespace rn = ros::names;
-
-        // load parameters
-        const std::string port(rp::param< std::string >(rn::append(ns, "port"), "/dev/ttyACM0"));
-        const std::string mode(rp::param< std::string >(rn::append(ns, "mode"), "ndof"));
-
+    void start() {
         // setup the serial port
         try {
-            serial_.open(port);
+            serial_.open(port_);
 
             typedef boost::asio::serial_port Serial;
             serial_.set_option(Serial::baud_rate(115200));
@@ -68,18 +63,19 @@ class BNO055USBStick {
 
         // pack commands
         commands_.clear();
-        if (mode == "ndof") {
+        if (mode_ == "ndof") {
             for (const boost::uint8_t **command = Constants::toNDOFCommands(); *command;
                  ++command) {
                 commands_.push_back(*command);
             }
-        } else if (mode == "imu") {
+        } else if (mode_ == "imu") {
             for (const boost::uint8_t **command = Constants::toIMUCommands(); *command; ++command) {
                 commands_.push_back(*command);
             }
         } else {
             ROS_WARN_STREAM("Unknown mode \""
-                            << mode << "\" was given. Will use the default mode \"ndof\" instead.");
+                            << mode_
+                            << "\" was given. Will use the default mode \"ndof\" instead.");
             for (const boost::uint8_t **command = Constants::toNDOFCommands(); *command;
                  ++command) {
                 commands_.push_back(*command);
@@ -162,7 +158,7 @@ class BNO055USBStick {
             const boost::uint8_t *data_end(
                 boost::asio::buffer_cast< const boost::uint8_t * >(buffer_.data()) + bytes);
             const boost::uint8_t *data_begin(data_end - Constants::DAT_LEN);
-            const bno055_usb_stick_msgs::Output output(Decoder::decode(data_begin));
+            const bno055_usb_stick_msgs::Output output(decoder_.decode(data_begin));
             callback_(output);
         }
 
@@ -197,6 +193,10 @@ class BNO055USBStick {
     }
 
   private:
+    // parameters
+    const std::string port_;
+    const std::string mode_;
+
     // buffers
     std::deque< const boost::uint8_t * > commands_;
     boost::asio::streambuf buffer_;
@@ -207,6 +207,9 @@ class BNO055USBStick {
 
     // callback given by the user
     const Callback callback_;
+
+    // orientation and sensor decoder
+    Decoder decoder_;
 };
 }
 

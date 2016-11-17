@@ -1,9 +1,14 @@
 #ifndef BNO055_USB_STICK_DECODER_HPP
 #define BNO055_USB_STICK_DECODER_HPP
 
+#include <algorithm>
+#include <string>
+
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Vector3.h>
+#include <ros/names.h>
+#include <ros/param.h>
 #include <ros/time.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/MagneticField.h>
@@ -20,14 +25,17 @@
 namespace bno055_usb_stick {
 class Decoder {
   public:
-    Decoder() {}
+    Decoder(const std::string &ns)
+        : seq_(0), frame_id_(ros::param::param< std::string >(ros::names::append(ns, "frame_id"),
+                                                              "bno055")) {}
 
     virtual ~Decoder() {}
 
-    static bno055_usb_stick_msgs::Output decode(const boost::uint8_t *data) {
+    bno055_usb_stick_msgs::Output decode(const boost::uint8_t *data) {
         bno055_usb_stick_msgs::Output output;
+        output.header.seq = seq_++;
         output.header.stamp = ros::Time::now();
-        output.header.frame_id = "bno055";
+        output.header.frame_id = frame_id_;
         output.acceleration = decodeAcc(data + Constants::ACC_POS);
         output.magnetometer = decodeMag(data + Constants::MAG_POS);
         output.gyroscope = decodeGyr(data + Constants::GYR_POS);
@@ -40,19 +48,25 @@ class Decoder {
         return output;
     }
 
-    static tf::StampedTransform toTFTransform(const bno055_usb_stick_msgs::Output &output) {
+    static tf::StampedTransform toTFTransform(const bno055_usb_stick_msgs::Output &output,
+                                              const std::string &base_frame_id) {
         tf::Quaternion quaternion;
         tf::quaternionMsgToTF(output.quaternion, quaternion);
-        return tf::StampedTransform(tf::Transform(tf::Quaternion(quaternion)), output.header.stamp,
-                                    "fixed", output.header.frame_id);
+        return tf::StampedTransform(tf::Transform(quaternion), output.header.stamp, base_frame_id,
+                                    output.header.frame_id);
     }
 
     static sensor_msgs::Imu toImuMsg(const bno055_usb_stick_msgs::Output &output) {
         sensor_msgs::Imu imu;
         imu.header = output.header;
         imu.orientation = output.quaternion;
+        std::fill(imu.orientation_covariance.begin(), imu.orientation_covariance.end(), 0.);
         imu.angular_velocity = output.gyroscope;
+        std::fill(imu.angular_velocity_covariance.begin(), imu.angular_velocity_covariance.end(),
+                  0.);
         imu.linear_acceleration = output.acceleration;
+        std::fill(imu.linear_acceleration_covariance.begin(),
+                  imu.linear_acceleration_covariance.end(), 0.);
         return imu;
     }
 
@@ -68,6 +82,7 @@ class Decoder {
         sensor_msgs::MagneticField mag;
         mag.header = output.header;
         mag.magnetic_field = output.magnetometer;
+        std::fill(mag.magnetic_field_covariance.begin(), mag.magnetic_field_covariance.end(), 0.);
         return mag;
     }
 
@@ -75,6 +90,7 @@ class Decoder {
         sensor_msgs::Temperature temp;
         temp.header = output.header;
         temp.temperature = output.temperature;
+        temp.variance = 0.;
         return temp;
     }
 
@@ -151,6 +167,10 @@ class Decoder {
                             const double denom) {
         return boost::int16_t((boost::int16_t(msb) << 8) | lsb) / denom;
     }
+
+  private:
+    std::size_t seq_;
+    const std::string frame_id_;
 };
 }
 #endif // BNO055_USB_STICK_DECODER_HPP
