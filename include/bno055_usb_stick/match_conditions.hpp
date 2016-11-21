@@ -43,6 +43,9 @@ struct ResponseCondition {
                 // return the result that means a entire response was found.
                 return Result(response_end, true);
             }
+            // no suffix found
+            // return the result of rest of buffer
+            return operator()(response_begin + 1, end);
         }
 
         // reaching here means that the found prefix should be evaluated again
@@ -84,6 +87,9 @@ struct DataCondition {
                 // return the result that means the complete data was found.
                 return Result(data_end, true);
             }
+            // no suffix found
+            // return the result of rest of buffer
+            return operator()(data_begin + 1, end);
         }
 
         // reaching here means that the found header should be evaluated again
