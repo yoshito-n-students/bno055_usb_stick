@@ -70,9 +70,11 @@ class Decoder {
         return imu;
     }
 
-    static geometry_msgs::PoseStamped toPoseMsg(const bno055_usb_stick_msgs::Output &output) {
+    static geometry_msgs::PoseStamped toPoseMsg(const bno055_usb_stick_msgs::Output &output,
+                                                const std::string &base_frame_id) {
         geometry_msgs::PoseStamped pose;
         pose.header = output.header;
+        pose.header.frame_id = base_frame_id;
         pose.pose.position.x = pose.pose.position.y = pose.pose.position.z = 0.;
         pose.pose.orientation = output.quaternion;
         return pose;
