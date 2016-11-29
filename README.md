@@ -4,6 +4,9 @@ A ROS driver of Bosch BNO055 USB Stick
 ## Device
 Bosch BNO055 USB Stick http://www.mouser.jp/new/bosch/bosch-bno055-usb-stick/
 
+## Dependencies
+bno055_usb_stick_msgs https://github.com/yoshito-n-students/bno055_usb_stick_msgs
+
 ## Published Topics
 imu (sensor_msgs/Imu)
 
