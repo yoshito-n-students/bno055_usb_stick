@@ -8,6 +8,8 @@ Bosch BNO055 USB Stick http://www.mouser.jp/new/bosch/bosch-bno055-usb-stick/
 bno055_usb_stick_msgs https://github.com/yoshito-n-students/bno055_usb_stick_msgs
 
 ## Published Topics
+output (bno055_usb_stick_msgs/Output)
+
 imu (sensor_msgs/Imu)
 
 pose (geometry_msgs/PoseStamped)

@@ -19,6 +19,7 @@
 
 namespace bus = bno055_usb_stick;
 
+ros::Publisher out_pub;
 ros::Publisher imu_pub;
 ros::Publisher pose_pub;
 boost::shared_ptr< tf::TransformBroadcaster > tf_pub;
@@ -26,6 +27,7 @@ ros::Publisher mag_pub;
 ros::Publisher temp_pub;
 
 void publish(const bno055_usb_stick_msgs::Output &output, const std::string &fixed_frame_id) {
+    out_pub.publish(output);
     imu_pub.publish(bus::Decoder::toImuMsg(output));
     pose_pub.publish(bus::Decoder::toPoseMsg(output, fixed_frame_id));
     tf_pub->sendTransform(bus::Decoder::toTFTransform(output, fixed_frame_id));
@@ -42,6 +44,7 @@ int main(int argc, char *argv[]) {
     const std::string fixed_frame_id(ros::param::param< std::string >("~fixed_frame_id", "fixed"));
 
     // setup publishers
+    out_pub = nh.advertise< bno055_usb_stick_msgs::Output >("output", 1);
     imu_pub = nh.advertise< sensor_msgs::Imu >("imu", 1);
     pose_pub = nh.advertise< geometry_msgs::PoseStamped >("pose", 1);
     tf_pub.reset(new tf::TransformBroadcaster);
