@@ -107,7 +107,7 @@ find_package(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES bno055_usb_stick
+  LIBRARIES ${Boost_LIBRARIES} #bno055_usb_stick
   CATKIN_DEPENDS bno055_usb_stick_msgs geometry_msgs roscpp sensor_msgs tf
 #  DEPENDS system_lib
 )
