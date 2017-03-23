@@ -22,17 +22,27 @@ namespace bus = bno055_usb_stick;
 ros::Publisher out_pub;
 ros::Publisher imu_pub;
 ros::Publisher pose_pub;
-boost::shared_ptr< tf::TransformBroadcaster > tf_pub;
 ros::Publisher mag_pub;
 ros::Publisher temp_pub;
+boost::shared_ptr< tf::TransformBroadcaster > tf_pub;
 
 void publish(const bno055_usb_stick_msgs::Output &output, const std::string &fixed_frame_id) {
-  out_pub.publish(output);
-  imu_pub.publish(bus::Decoder::toImuMsg(output));
-  pose_pub.publish(bus::Decoder::toPoseMsg(output, fixed_frame_id));
+  if (out_pub.getNumSubscribers() > 0) {
+    out_pub.publish(output);
+  }
+  if (imu_pub.getNumSubscribers() > 0) {
+    imu_pub.publish(bus::Decoder::toImuMsg(output));
+  }
+  if (pose_pub.getNumSubscribers() > 0) {
+    pose_pub.publish(bus::Decoder::toPoseMsg(output, fixed_frame_id));
+  }
+  if (mag_pub.getNumSubscribers() > 0) {
+    mag_pub.publish(bus::Decoder::toMagMsg(output));
+  }
+  if (temp_pub.getNumSubscribers() > 0) {
+    temp_pub.publish(bus::Decoder::toTempMsg(output));
+  }
   tf_pub->sendTransform(bus::Decoder::toTFTransform(output, fixed_frame_id));
-  mag_pub.publish(bus::Decoder::toMagMsg(output));
-  temp_pub.publish(bus::Decoder::toTempMsg(output));
 }
 
 int main(int argc, char *argv[]) {
@@ -47,9 +57,9 @@ int main(int argc, char *argv[]) {
   out_pub = nh.advertise< bno055_usb_stick_msgs::Output >("output", 1);
   imu_pub = nh.advertise< sensor_msgs::Imu >("imu", 1);
   pose_pub = nh.advertise< geometry_msgs::PoseStamped >("pose", 1);
-  tf_pub.reset(new tf::TransformBroadcaster);
   mag_pub = nh.advertise< sensor_msgs::MagneticField >("magnetic_field", 1);
   temp_pub = nh.advertise< sensor_msgs::Temperature >("temperature", 1);
+  tf_pub.reset(new tf::TransformBroadcaster);
 
   // construct the worker
   boost::asio::io_service asio_service;

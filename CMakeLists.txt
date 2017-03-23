@@ -107,7 +107,7 @@ find_package(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES bno055_usb_stick
+  LIBRARIES ${Boost_LIBRARIES} #bno055_usb_stick
   CATKIN_DEPENDS bno055_usb_stick_msgs geometry_msgs roscpp sensor_msgs tf
 #  DEPENDS system_lib
 )
@@ -142,7 +142,10 @@ add_executable(
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(bno055_usb_stick_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(
+  bno055_usb_stick_node
+  bno055_usb_stick_msgs_generate_messages_cpp
+  )
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
