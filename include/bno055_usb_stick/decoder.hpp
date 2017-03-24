@@ -26,14 +26,12 @@ namespace bno055_usb_stick {
 class Decoder {
 public:
   Decoder(const std::string &ns)
-      : seq_(0),
-        frame_id_(ros::param::param< std::string >(ros::names::append(ns, "frame_id"), "bno055")) {}
+      : frame_id_(ros::param::param< std::string >(ros::names::append(ns, "frame_id"), "bno055")) {}
 
   virtual ~Decoder() {}
 
   bno055_usb_stick_msgs::Output decode(const boost::uint8_t *data) {
     bno055_usb_stick_msgs::Output output;
-    output.header.seq = seq_++;
     output.header.stamp = ros::Time::now();
     output.header.frame_id = frame_id_;
     output.acceleration = decodeAcc(data + Constants::ACC_POS);
@@ -169,7 +167,6 @@ private:
   }
 
 private:
-  std::size_t seq_;
   const std::string frame_id_;
 };
 }
