@@ -23,6 +23,8 @@ temperature (sensor_msgs/Temperature)
 fixed -> bno055
 
 ## Parameters
+~publish_tf (bool, default: false)
+
 ~fixed_frame_id (string, default: fixed)
 
 ~frame_id (string, default: bno055)
