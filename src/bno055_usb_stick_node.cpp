@@ -1,8 +1,8 @@
 #include <string>
 
 #include <geometry_msgs/PoseStamped.h>
-#include <ros/node_handle.h>
 #include <ros/init.h>
+#include <ros/node_handle.h>
 #include <ros/param.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/MagneticField.h>
@@ -42,7 +42,9 @@ void publish(const bno055_usb_stick_msgs::Output &output, const std::string &fix
   if (temp_pub.getNumSubscribers() > 0) {
     temp_pub.publish(bus::Decoder::toTempMsg(output));
   }
-  tf_pub->sendTransform(bus::Decoder::toTFTransform(output, fixed_frame_id));
+  if (tf_pub) {
+    tf_pub->sendTransform(bus::Decoder::toTFTransform(output, fixed_frame_id));
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -52,6 +54,7 @@ int main(int argc, char *argv[]) {
 
   // load parameters
   const std::string fixed_frame_id(ros::param::param< std::string >("~fixed_frame_id", "fixed"));
+  const bool publish_tf(ros::param::param("~publish_tf", false));
 
   // setup publishers
   out_pub = nh.advertise< bno055_usb_stick_msgs::Output >("output", 1);
@@ -59,7 +62,9 @@ int main(int argc, char *argv[]) {
   pose_pub = nh.advertise< geometry_msgs::PoseStamped >("pose", 1);
   mag_pub = nh.advertise< sensor_msgs::MagneticField >("magnetic_field", 1);
   temp_pub = nh.advertise< sensor_msgs::Temperature >("temperature", 1);
-  tf_pub.reset(new tf::TransformBroadcaster);
+  if (publish_tf) {
+    tf_pub.reset(new tf::TransformBroadcaster);
+  }
 
   // construct the worker
   boost::asio::io_service asio_service;
