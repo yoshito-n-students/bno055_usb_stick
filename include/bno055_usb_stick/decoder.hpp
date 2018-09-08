@@ -47,11 +47,14 @@ public:
   }
 
   static tf::StampedTransform toTFTransform(const bno055_usb_stick_msgs::Output &output,
-                                            const std::string &base_frame_id) {
+                                            const std::string &frame_id,
+                                            const std::string &child_frame_id,
+                                            const bool do_invert) {
     tf::Quaternion quaternion;
     tf::quaternionMsgToTF(output.quaternion, quaternion);
-    return tf::StampedTransform(tf::Transform(quaternion), output.header.stamp, base_frame_id,
-                                output.header.frame_id);
+    return tf::StampedTransform(do_invert ? tf::Transform(quaternion).inverse()
+                                          : tf::Transform(quaternion),
+                                output.header.stamp, frame_id, child_frame_id);
   }
 
   static sensor_msgs::Imu toImuMsg(const bno055_usb_stick_msgs::Output &output) {
@@ -68,10 +71,10 @@ public:
   }
 
   static geometry_msgs::PoseStamped toPoseMsg(const bno055_usb_stick_msgs::Output &output,
-                                              const std::string &base_frame_id) {
+                                              const std::string &frame_id) {
     geometry_msgs::PoseStamped pose;
     pose.header = output.header;
-    pose.header.frame_id = base_frame_id;
+    pose.header.frame_id = frame_id;
     pose.pose.position.x = pose.pose.position.y = pose.pose.position.z = 0.;
     pose.pose.orientation = output.quaternion;
     return pose;
@@ -169,5 +172,5 @@ private:
 private:
   const std::string frame_id_;
 };
-}
+} // namespace bno055_usb_stick
 #endif // BNO055_USB_STICK_DECODER_HPP
