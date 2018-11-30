@@ -59,11 +59,13 @@ public:
     imu.header = output.header;
     imu.orientation = output.quaternion;
     std::fill(imu.orientation_covariance.begin(), imu.orientation_covariance.end(), 0.);
+    imu.orientation_covariance[0] = -1;
     imu.angular_velocity = output.gyroscope;
     std::fill(imu.angular_velocity_covariance.begin(), imu.angular_velocity_covariance.end(), 0.);
+    imu.angular_velocity_covariance[0] = -1;
     imu.linear_acceleration = output.acceleration;
-    std::fill(imu.linear_acceleration_covariance.begin(), imu.linear_acceleration_covariance.end(),
-              0.);
+    std::fill(imu.linear_acceleration_covariance.begin(), imu.linear_acceleration_covariance.end(), 0.);
+    imu.linear_acceleration_covariance[0] = -1;
     return imu;
   }
 
