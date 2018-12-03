@@ -15,13 +15,9 @@ struct ResponseCondition {
   std::pair< Iterator, bool > operator()(const Iterator begin, const Iterator end) {
     typedef typename Iterator::value_type Value;
     typedef std::pair< Iterator, bool > Result;
-    static const boost::array< Value, 1 > prefix = {
-        static_cast<Value>(0xaa)
-    };
-    static const boost::array< Value, 2 > suffix = {
-        static_cast<Value>(0x0d),
-        static_cast<Value>(0x0a)
-    };
+    static const boost::array< Value, 1 > prefix = {static_cast< Value >(0xaa)};
+    static const boost::array< Value, 2 > suffix = {static_cast< Value >(0x0d),
+                                                    static_cast< Value >(0x0a)};
 
     // find a prefix of response
     const Iterator response_begin(std::search(begin, end, prefix.begin(), prefix.end()));
@@ -72,17 +68,11 @@ struct DataCondition {
     typedef typename Iterator::value_type Value;
     typedef std::pair< Iterator, bool > Result;
     static const boost::array< Value, 5 > header = {
-        static_cast<Value>(0xaa),
-        static_cast<Value>(0x38),
-        static_cast<Value>(0x01),
-        static_cast<Value>(0x00),
-        static_cast<Value>(0x86)
-    };
+        static_cast< Value >(0xaa), static_cast< Value >(0x38), static_cast< Value >(0x01),
+        static_cast< Value >(0x00), static_cast< Value >(0x86)};
     static const std::size_t data_length(header[1]);
-    static const boost::array< Value, 2 > suffix = {
-        static_cast<Value>(0x0d),
-        static_cast<Value>(0x0a)
-    };
+    static const boost::array< Value, 2 > suffix = {static_cast< Value >(0x0d),
+                                                    static_cast< Value >(0x0a)};
 
     // find a header of data
     const Iterator data_begin(std::search(begin, end, header.begin(), header.end()));
@@ -118,13 +108,13 @@ struct DataCondition {
     return Result(data_begin, false);
   }
 };
-}
+} // namespace bno055_usb_stick
 
 namespace boost {
 namespace asio {
 template <> struct is_match_condition< bno055_usb_stick::ResponseCondition > : boost::true_type {};
 template <> struct is_match_condition< bno055_usb_stick::DataCondition > : boost::true_type {};
-}
-}
+} // namespace asio
+} // namespace boost
 
 #endif // BNO055_USB_STICK_MATCH_CONDITIONS_HPP
