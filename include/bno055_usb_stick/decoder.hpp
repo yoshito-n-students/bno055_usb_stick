@@ -58,14 +58,19 @@ public:
     sensor_msgs::Imu imu;
     imu.header = output.header;
     imu.orientation = output.quaternion;
-    std::fill(imu.orientation_covariance.begin(), imu.orientation_covariance.end(), 0.);
-    imu.orientation_covariance[0] = -1;
     imu.angular_velocity = output.gyroscope;
-    std::fill(imu.angular_velocity_covariance.begin(), imu.angular_velocity_covariance.end(), 0.);
-    imu.angular_velocity_covariance[0] = -1;
     imu.linear_acceleration = output.acceleration;
-    std::fill(imu.linear_acceleration_covariance.begin(), imu.linear_acceleration_covariance.end(), 0.);
+
+    // To indicate no covariance estimate, set the 1st elements of matrice -1
+    imu.orientation_covariance[0] = -1;
+    std::fill(imu.orientation_covariance.begin() + 1, imu.orientation_covariance.end(), 0.);
+    imu.angular_velocity_covariance[0] = -1;
+    std::fill(imu.angular_velocity_covariance.begin() + 1, imu.angular_velocity_covariance.end(),
+              0.);
     imu.linear_acceleration_covariance[0] = -1;
+    std::fill(imu.linear_acceleration_covariance.begin() + 1,
+              imu.linear_acceleration_covariance.end(), 0.);
+
     return imu;
   }
 
@@ -171,5 +176,5 @@ private:
 private:
   const std::string frame_id_;
 };
-}
+} // namespace bno055_usb_stick
 #endif // BNO055_USB_STICK_DECODER_HPP
